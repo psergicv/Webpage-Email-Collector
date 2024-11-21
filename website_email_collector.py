@@ -3,6 +3,7 @@ import re
 import requests
 from datetime import datetime
 from urllib.parse import urlparse
+from bs4 import BeautifulSoup
 
 # Directory where files are being saved
 SAVE_DIR = "collected_emails"
@@ -16,15 +17,22 @@ def extract_emails_from_page(url):
         # Fetch the content of the webpage
         response = requests.get(url)
         response.raise_for_status()
-        webpage_content = response.text
 
-        # Let's find emails using regex
-        email_pattern = r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
-        emails = set(re.findall(email_pattern, webpage_content))
+        # We will parse data only from <body>
+        # Parse HTML and extract <body>
+        soup = BeautifulSoup(response.text, 'html.parser')
+        body_content = soup.body.get_text(separator=" ")
+
+        # Let's find emails using regex. Regex updated
+        email_pattern = r"(?<!\w)[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b"
+        emails = set(re.findall(email_pattern, body_content))
 
         return emails
     except requests.exceptions.RequestException as e:
         print(f"Error fetching the URL: {e}")
+        return set()
+    except AttributeError:
+        print("No <body> tag was found in HTML.")
         return set()
 
 
